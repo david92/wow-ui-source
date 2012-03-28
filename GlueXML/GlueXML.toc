@@ -33,7 +33,6 @@ VideoOptionsFrame.xml
 AudioOptionsFrame.xml
 AudioOptionsPanels.xml
 StarterEditionPopUp.xml
-##CameraSelect.xml
 
 ## This Always Runs Last, Add New Items above it.
 GlueLocalizationPost.xml
