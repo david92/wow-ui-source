@@ -83,6 +83,8 @@ function Localize()
 	LATEST_TOS_URL = "http://launcher.wow-europe.com/en/tos.htm";
 	LATEST_EULA_URL = "http://launcher.wow-europe.com/en/eula.htm";
 	CLIENT_TRIAL = "<html><body><p>Your account is a full retail account, and is not compatible with the World of Warcraft Trial version. Please install the retail version of World of Warcraft. If you need more help, see <a href=\"http://www.wow-europe.com/en/info/faq/trial.html\">www.wow-europe.com/en/info/faq/trial.html</a></p></body></html>";
+	
+	VISITABLE_URL3 = "http://enGB.nydus.battle.net/wow/enGB/client/item-restoration";
 end
 
 function LocalizeFrames()
