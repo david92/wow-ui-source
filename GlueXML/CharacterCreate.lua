@@ -15,9 +15,9 @@ PAID_SERVICE_CHARACTER_ID = nil;
 PAID_SERVICE_TYPE = nil;
 
 FACTION_BACKDROP_COLOR_TABLE = {
-	["Alliance"] = {0.5, 0.5, 0.5, 0.09, 0.09, 0.19, 0, 0, 0.2},
-	["Horde"] = {0.5, 0.2, 0.2, 0.19, 0.05, 0.05, 0.2, 0, 0},
-	["Player"] = {0.2, 0.5, 0.2, 0.05, 0.2, 0.05},
+	["Alliance"] = {0.5, 0.5, 0.5, 0.09, 0.09, 0.19, 0, 0, 0.2, 0.29, 0.33, 0.91},
+	["Horde"] = {0.5, 0.2, 0.2, 0.19, 0.05, 0.05, 0.2, 0, 0, 0.90, 0.05, 0.07},
+	["Player"] = {0.2, 0.5, 0.2, 0.05, 0.2, 0.05, 0.05, 0.2, 0.05, 1, 1, 1},
 };
 FRAMES_TO_BACKDROP_COLOR = { 
 	"CharacterCreateCharacterRace",
@@ -91,7 +91,7 @@ function CharacterCreate_OnLoad(self)
 	SetCharCustomizeFrame("CharacterCreate");
 
 	for i=1, NUM_CHAR_CUSTOMIZATIONS, 1 do
-		_G["CharCreateCustomizationButton"..i].type:SetText(_G["CHAR_CUSTOMIZATION"..i.."_DESC"]);
+		_G["CharCreateCustomizationButton"..i].text:SetText(_G["CHAR_CUSTOMIZATION"..i.."_DESC"]);
 	end
 
 	-- Color edit box backdrop
@@ -104,8 +104,6 @@ function CharacterCreate_OnLoad(self)
 	end
 
 	CharacterCreateFrame.state = "CLASSRACE";
-	CharCreateLeftPanel.header:SetText(CHOOSE_YOUR_RACE);
-	CharCreateRightPanel.header:SetText(CHOOSE_YOUR_CLASS);
 end
 
 function CharacterCreate_OnShow()
@@ -363,10 +361,41 @@ function SetCharacterRace(id)
 	-- Set backdrop colors based on faction
 	local name, faction = GetFactionForRace(CharacterCreate.selectedRace);
 	local backdropColor = FACTION_BACKDROP_COLOR_TABLE[faction];
-	CharCreateLeftPanel.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
-	CharCreateRightPanel.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
+	CharCreateRaceFrame.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
+	CharCreateClassFrame.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
+	CharCreateCustomizationFrame.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
+	CharCreatePreviewFrame.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
+	CharCreateCustomizationFrameBanner:SetVertexColor(backdropColor[10], backdropColor[11], backdropColor[12]);
 	CharacterCreateNameEdit:SetBackdropColor(backdropColor[4], backdropColor[5], backdropColor[6]);
 	
+	-- race info
+	local frame = CharCreateRaceInfoFrame;
+	local race, fileString = GetNameForRace();
+	frame.title:SetText(race);
+	fileString = strupper(fileString);
+	local gender;
+	if ( GetSelectedSex() == SEX_MALE ) then
+		gender = "MALE";
+	else
+		gender = "FEMALE";
+	end
+	local raceText = _G["RACE_INFO_"..fileString];
+	local abilityIndex = 1;
+	local tempText = _G["ABILITY_INFO_"..fileString..abilityIndex];
+	abilityText = "";
+	while ( tempText ) do
+		abilityText = abilityText..tempText.."\n\n";
+		abilityIndex = abilityIndex + 1;
+		tempText = _G["ABILITY_INFO_"..fileString..abilityIndex];
+	end
+	CharCreateRaceInfoFrameScrollFrameScrollBar:SetValue(0);
+	CharCreateRaceInfoFrame.scrollFrame.scrollChild.infoText:SetText(GetFlavorText("RACE_INFO_"..strupper(fileString), GetSelectedSex()).."|n|n");
+	if ( abilityText and abilityText ~= "" ) then
+		CharCreateRaceInfoFrame.scrollFrame.scrollChild.bulletText:SetText(abilityText);
+	else
+		CharCreateRaceInfoFrame.scrollFrame.scrollChild.bulletText:SetText("");
+	end	
+
 	-- Altered form
 	if (HasAlteredForm()) then
 		SetPortraitTexture(CharacterCreateAlternateFormTopPortrait, 22, GetSelectedSex());
@@ -401,8 +430,9 @@ function SetCharacterClass(id)
 		end
 	end
 	
+	-- class info
+	local frame = CharCreateClassInfoFrame;
 	local className, classFileName, _, tank, healer, damage = GetSelectedClass();
-	classFileName = strupper(classFileName)
 	local abilityIndex = 0;
 	local tempText = _G["CLASS_INFO_"..classFileName..abilityIndex];
 	abilityText = "";
@@ -411,7 +441,10 @@ function SetCharacterClass(id)
 		abilityIndex = abilityIndex + 1;
 		tempText = _G["CLASS_INFO_"..classFileName..abilityIndex];
 	end
-	local coords = CLASS_ICON_TCOORDS[classFileName];
+	CharCreateClassInfoFrame.title:SetText(className);
+	CharCreateClassInfoFrame.scrollFrame.scrollChild.bulletText:SetText(abilityText);
+	CharCreateClassInfoFrame.scrollFrame.scrollChild.infoText:SetText(GetFlavorText("CLASS_"..strupper(classFileName), GetSelectedSex()).."|n|n");
+	CharCreateClassInfoFrameScrollFrameScrollBar:SetValue(0);
 end
 
 function CharacterCreate_OnChar()
@@ -458,9 +491,8 @@ function CharacterCreate_Back()
 		PlaySound("gsCharacterCreationCancel");
 		CharacterCreateFrame.state = "CLASSRACE"
 		CharCreateClassFrame:Show();
-		CharCreateLeftPanel.header:SetText(CHOOSE_YOUR_RACE);
 		CharCreateRaceFrame:Show();
-		CharCreateRightPanel.header:SetText(CHOOSE_YOUR_CLASS);
+		CharCreateMoreInfoButton:Show();
 		CharCreateCustomizationFrame:Hide();
 		CharCreatePreviewFrame:Hide();
 		CharCreateOkayButton:SetText(NEXT);
@@ -500,9 +532,9 @@ function CharacterCreate_Forward()
 
 		CharCreateClassFrame:Hide();
 		CharCreateRaceFrame:Hide();
+		CharCreateMoreInfoButton:Hide();
 		CharCreateCustomizationFrame:Show();
 		CharCreatePreviewFrame:Show();
-		CharCreateLeftPanel.header:SetText(CUSTOMIZE_OPTIONS);
 		-- reselect the same customization, or select the 1st one, to apply styles
 		CharCreateSelectCustomizationType(CharacterCreateFrame.customizationType or 1);
 		CharCreateOkayButton:SetText(FINISH);
@@ -527,7 +559,6 @@ function CharacterClass_OnClick(self, id)
 			SetCharacterClass(id);
 			SetCharacterRace(GetSelectedRace());
 			CharacterChangeFixup();
-			CharCreateMovieFrame:StopMovie();
 		else
 			self:SetChecked(1);
 		end
@@ -626,9 +657,9 @@ function CharacterCreateRotateLeft_OnUpdate(self)
 end
 
 function CharacterCreate_UpdateHairCustomization()
-	CharCreateCustomizationButton3.type:SetText(_G["HAIR_"..GetHairCustomization().."_STYLE"]);
-	CharCreateCustomizationButton4.type:SetText(_G["HAIR_"..GetHairCustomization().."_COLOR"]);
-	CharCreateCustomizationButton5.type:SetText(_G["FACIAL_HAIR_"..GetFacialHairCustomization()]);
+	CharCreateCustomizationButton3.text:SetText(_G["HAIR_"..GetHairCustomization().."_STYLE"]);
+	CharCreateCustomizationButton4.text:SetText(_G["HAIR_"..GetHairCustomization().."_COLOR"]);
+	CharCreateCustomizationButton5.text:SetText(_G["FACIAL_HAIR_"..GetFacialHairCustomization()]);
 end
 
 function SetButtonDesaturated(button, desaturated)
@@ -714,36 +745,19 @@ function CharacterChangeFixup()
 	end
 end
 
-function CharCreateMovieFrame_OnUpdate(self, elapsed)
-	CharCreateMovieFrame.delay = CharCreateMovieFrame.delay - elapsed;
-	if ( CharCreateMovieFrame.delay <= 0 ) then
-		CharCreateMovieFrame:StartMovie(1);
-		CharCreateMovieFrame:SetScript("OnUpdate", nil);
-	end
-end
-
-function CharCreateMovieFrame_PlayMovie()
-	CharCreateMovieFrame:StopMovie();
-	CharCreateMovieFrameBg:Show();
-	CharCreateMovieControlFrame:Hide();
-	-- can't start playing the movie in the same frame if we want to hide the Play button right away
-	CharCreateMovieFrame.delay = 0.1;
-	CharCreateMovieFrame:SetScript("OnUpdate", CharCreateMovieFrame_OnUpdate);
-end
-
 function CharCreateSelectCustomizationType(newType)
 	ResetPreviewFramesModel();
 	SetPreviewFramesFeature(newType);
 	if ( newType == 1 ) then
-		CharCreateRightPanel.header:SetText(CHAR_CUSTOMIZATION1_DESC);
+		CharCreatePreviewLabel:SetText(CHAR_CUSTOMIZATION1_DESC);
 	elseif ( newType == 2 ) then
-		CharCreateRightPanel.header:SetText(CHAR_CUSTOMIZATION2_DESC);
+		CharCreatePreviewLabel:SetText(CHAR_CUSTOMIZATION2_DESC);
 	elseif ( newType == 3 ) then
-		CharCreateRightPanel.header:SetText(_G["HAIR_"..GetHairCustomization().."_STYLE"]);
+		CharCreatePreviewLabel:SetText(_G["HAIR_"..GetHairCustomization().."_STYLE"]);
 	elseif ( newType == 4 ) then
-		CharCreateRightPanel.header:SetText(_G["HAIR_"..GetHairCustomization().."_COLOR"]);
+		CharCreatePreviewLabel:SetText(_G["HAIR_"..GetHairCustomization().."_COLOR"]);
 	elseif ( newType == 5 ) then
-		CharCreateRightPanel.header:SetText(_G["FACIAL_HAIR_"..GetFacialHairCustomization()]);
+		CharCreatePreviewLabel:SetText(_G["FACIAL_HAIR_"..GetFacialHairCustomization()]);
 	end
 	-- deselect previous type selection
 	if ( CharacterCreateFrame.customizationType and CharacterCreateFrame.customizationType ~= newType ) then
@@ -751,90 +765,26 @@ function CharCreateSelectCustomizationType(newType)
 	end
 	_G["CharCreateCustomizationButton"..newType]:SetChecked(1);
 	CharacterCreateFrame.customizationType = newType;
-	-- scrollbar stuff
-	local numStyles = GetNumFeatureVariations(CharacterCreateFrame.customizationType);
-	if ( numStyles > NUM_PREVIEW_FRAMES ) then
-		local maxValue = ceil((numStyles - NUM_PREVIEW_FRAMES) / 2);
-		CharCreatePreviews_ToggleScrollBar(true, maxValue);
-	else
-		CharCreatePreviews_ToggleScrollBar(false)
-	end
-	-- show/hide preview frames
 	CharCreatePreviews_Display();
 end
 
 function CharCreateSelectFeatureVariation(button)
 	local previewFrame = button:GetParent();
 	local style = previewFrame:GetID();
+	-- uncheck previous selection
 	local lastStyle = GetSelectedFeatureVariation(CharacterCreateFrame.customizationType);
-	local offset = CharCreatePreviews_GetOffset();
-	-- uncheck previous selection if visible
-	if ( lastStyle > offset and lastStyle - offset <= NUM_PREVIEW_FRAMES ) then
-		_G["CharCreatePreviewFrame"..(lastStyle - offset)].button:SetChecked(0);
+	if ( lastStyle <= NUM_PREVIEW_FRAMES ) then
+		_G["CharCreatePreviewFrame"..lastStyle].button:SetChecked(0);
 	end
 	previewFrame.button:SetChecked(1);
-	SelectFeatureVariation(CharacterCreateFrame.customizationType, style + offset);
-end
-
-function CharCreatePreviews_ToggleScrollBar(on, maxValue)
-	local frameWidth;
-	local frameHeight;
-	local yOffset;
-	local modelWidth;
-	local modelHeigth;
-
-	if ( on ) then
-		CharCreatePreviewFrame.scrollBar:Show();
-		frameWidth = 100;
-		frameHeight = 95;
-		modelWidth = 80;
-		modelHeight = 75;
-		yOffset = -5;
-		CharCreatePreviewFrame.scrollBar:SetMinMaxValues(0, maxValue);
-		-- scroll to selected style
-		local activeStyle = GetSelectedFeatureVariation(CharacterCreateFrame.customizationType);
-		if ( activeStyle > NUM_PREVIEW_FRAMES ) then
-			CharCreatePreviewFrame.scrollBar:SetValue(ceil((activeStyle - NUM_PREVIEW_FRAMES) / 2));
-		else
-			CharCreatePreviewFrame.scrollBar:SetValue(0);
-		end
-	else
-		CharCreatePreviewFrame.scrollBar:Hide();
-		frameWidth = 110;
-		frameHeight = 104;
-		modelWidth = 88;
-		modelHeight = 82;
-		yOffset = 6;
-	end
-
-	for i = 1, NUM_PREVIEW_FRAMES do
-		local frame = _G["CharCreatePreviewFrame"..i];
-		frame:SetWidth(frameWidth);
-		frame:SetHeight(frameHeight);
-		frame.model:SetWidth(modelWidth);
-		frame.model:SetHeight(modelHeight);
-		if ( i > 2 and mod(i, 2) == 1 ) then
-			local prevFrame = _G["CharCreatePreviewFrame"..(i - 2)];
-			frame:SetPoint("TOP", prevFrame, "BOTTOM", 0, yOffset);
-		end
-	end
-end
-
-function CharCreatePreviews_GetOffset()
-	if ( CharCreatePreviewFrame.scrollBar:IsShown() ) then
-		return CharCreatePreviewFrame.scrollBar:GetValue() * 2;
-	else
-		return 0;
-	end
+	SelectFeatureVariation(CharacterCreateFrame.customizationType, style);
 end
 
 function CharCreatePreviews_Display()
 	local numStyles = GetNumFeatureVariations(CharacterCreateFrame.customizationType);
 	local activeStyle = GetSelectedFeatureVariation(CharacterCreateFrame.customizationType);
-	local offset = CharCreatePreviews_GetOffset();
-	for i = 1, NUM_PREVIEW_FRAMES do
-		local previewFrame = _G["CharCreatePreviewFrame"..i];
-		local previewIndex = i + offset;
+	for previewIndex = 1, NUM_PREVIEW_FRAMES do
+		local previewFrame = _G["CharCreatePreviewFrame"..previewIndex];
 		if ( previewIndex <= numStyles ) then
 			previewFrame:Show();
 			if ( previewIndex == activeStyle ) then

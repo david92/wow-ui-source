@@ -3,7 +3,7 @@ CHARACTER_SELECT_INITIAL_FACING = nil;
 
 CHARACTER_ROTATION_CONSTANT = 0.6;
 
-MAX_CHARACTERS_DISPLAYED = 10;
+MAX_CHARACTERS_DISPLAYED = 11;
 MAX_CHARACTERS_PER_REALM = 200; -- controled by the server now, so lets set it up high
 
 CHARACTER_LIST_OFFSET = 0;
@@ -63,7 +63,7 @@ function CharacterSelect_OnLoad(self)
 
 	CHARACTER_LIST_OFFSET = 0;
 	if (not IsGMClient()) then
-		MAX_CHARACTERS_PER_REALM = 10;
+		MAX_CHARACTERS_PER_REALM = 11;
 	end
 end
 
@@ -478,7 +478,7 @@ function UpdateCharacterList()
 	local connected = IsConnectedToServer();
 	for i=index, MAX_CHARACTERS_DISPLAYED, 1 do
 		local button = _G["CharSelectCharacterButton"..index];
-		if ( (CharacterSelect.createIndex == 0) and (numChars < MAX_CHARACTERS_PER_REALM) ) then
+		if ( (CharacterSelect.createIndex == 0) and (numChars < MAX_CHARACTERS_DISPLAYED) ) then
 			CharacterSelect.createIndex = index;
 			if ( connected ) then
 				--If can create characters position and show the create button
@@ -879,7 +879,7 @@ function AccountUpgradePanel_Update(isExpanded)
 		CharacterSelectLogo:Hide();
 	end
 
-	--We don't want to show the upgrade panel is Asian countries for now.
+	--We don't want to show the upgrade panel in Asian countries for now.
 	if ( NEVER_SHOW_UPGRADE ) then
 		CharSelectAccountUpgradePanel:Hide();
 		CharSelectAccountUpgradeButton:Hide();
@@ -892,7 +892,9 @@ function AccountUpgradePanel_Update(isExpanded)
 		CharSelectAccountUpgradePanel:Hide();
 		CharSelectAccountUpgradeButton:Hide();
 		CharSelectAccountUpgradeMiniPanel:Hide();
+		GameRoomBillingFrame:SetPoint("TOP", CharacterSelectLogo, "BOTTOM", 0, -50);
 	else
+		GameRoomBillingFrame:SetPoint("TOP", CharSelectAccountUpgradePanel, "BOTTOM", 0, -10);
 		local featureTable = ACCOUNT_UPGRADE_FEATURES[tag];
 		CharSelectAccountUpgradeButton:Show();
 		StarterEditionPopUp:Show();
