@@ -17,6 +17,8 @@ RealmList.xml
 AddonList.xml
 AccountLogin.xml
 DesignerMenu.xml
+OptionsFrameTemplates.xml
+OptionsPanelTemplates.xml
 CharacterSelect.xml
 CharacterCreate.xml
 PatchDownload.xml
@@ -24,8 +26,6 @@ MovieFrame.xml
 RealmWizard.xml
 CreditsFrame.xml
 SecurityMatrix.xml
-OptionsFrameTemplates.xml
-OptionsPanelTemplates.xml
 TrialConvert.xml
 GlueOptions.xml
 VideoOptionsFrame.xml
