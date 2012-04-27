@@ -14,6 +14,10 @@ PAID_FACTION_CHANGE = 3;
 PAID_SERVICE_CHARACTER_ID = nil;
 PAID_SERVICE_TYPE = nil;
 
+PREVIEW_FRAME_HEIGHT = 130;
+PREVIEW_FRAME_X_OFFSET = 19;
+PREVIEW_FRAME_Y_OFFSET = -7;
+
 FACTION_BACKDROP_COLOR_TABLE = {
 	["Alliance"] = {0.5, 0.5, 0.5, 0.09, 0.09, 0.19, 0, 0, 0.2, 0.29, 0.33, 0.91},
 	["Horde"] = {0.5, 0.2, 0.2, 0.19, 0.05, 0.05, 0.2, 0, 0, 0.90, 0.05, 0.07},
@@ -137,14 +141,11 @@ function CharacterCreate_OnLoad(self)
 	end
 
 	CharacterCreateFrame.state = "CLASSRACE";
+	
+	CharCreatePreviewFrame.previews = { };
 end
 
 function CharacterCreate_OnShow()
-	for i = 1, NUM_PREVIEW_FRAMES do
-		SetPreviewFrame("CharCreatePreviewFrame"..i.."Model", i);
-		_G["CharCreatePreviewFrame"..i.."Model"]:SetLight(1, 0, 0, -0.707, -0.707, 0.7, 1.0, 1.0, 1.0, 0.8, 1.0, 1.0, 0.8);
-	end
-
 	for i=1, MAX_CLASSES_PER_RACE, 1 do
 		local button = _G["CharCreateClassButton"..i];
 		button:Enable();
@@ -248,6 +249,9 @@ function CharacterCreate_OnHide()
 	if ( CharacterCreateFrame.state == "CUSTOMIZATION" ) then
 		CharacterCreate_Back();
 	end
+	-- character previews will need to be redone if coming back to character create. One reason is all the memory used for
+	-- tracking the frames (on the c side) will get released if the user returns to the login screen
+	CharCreatePreviewFrame.rebuildPreviews = true;
 end
 
 function CharacterCreate_OnEvent(event, arg1, arg2, arg3)
@@ -406,8 +410,8 @@ function SetCharacterRace(id)
 	CharCreatePreviewFrame.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
 	CharCreateCustomizationFrameBanner:SetVertexColor(backdropColor[10], backdropColor[11], backdropColor[12]);
 	CharacterCreateNameEdit:SetBackdropColor(backdropColor[4], backdropColor[5], backdropColor[6]);
-	CharCreateRaceInfoFrame:SetBackdropColor(backdropColor[4], backdropColor[5], backdropColor[6]);
-	CharCreateClassInfoFrame:SetBackdropColor(backdropColor[4], backdropColor[5], backdropColor[6]);
+	CharCreateRaceInfoFrame.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
+	CharCreateClassInfoFrame.factionBg:SetGradient("VERTICAL", 0, 0, 0, backdropColor[7], backdropColor[8], backdropColor[9]);
 	
 	-- race info
 	local frame = CharCreateRaceInfoFrame;
@@ -565,26 +569,20 @@ function CharacterCreate_Forward()
 	if ( CharacterCreateFrame.state == "CLASSRACE" ) then
 		CharacterCreateFrame.state = "CUSTOMIZATION"
 		PlaySound("gsCharacterSelectionCreateNew");
-		-- need to reload models if gender or race was changed, or class was swapped to or from DK
-		local race = GetSelectedRace();
-		local gender = GetSelectedSex();
-		local _, class = GetSelectedClass();
-		local classSwap = ( class == "DEATHKNIGHT" or CharacterCreateFrame.lastClass == "DEATHKNIGHT" ) and ( class ~= CharacterCreateFrame.lastClass );
-		if ( CharacterCreateFrame.lastRace ~= race or CharacterCreateFrame.lastGender ~= gender or classSwap ) then
-			CharacterCreateFrame.lastRace = race;
-			CharacterCreateFrame.lastGender = gender;
-			CharacterCreateFrame.lastClass = class;
-			CharCreate_SetPreviewModels();
-		end
-
 		CharCreateClassFrame:Hide();
 		CharCreateRaceFrame:Hide();
 		CharCreateMoreInfoButton:Hide();
 		CharCreateCustomizationFrame:Show();
 		CharCreatePreviewFrame:Show();
 		CharacterTemplateConfirmDialog:Hide();
-		-- reselect the same customization, or select the 1st one, to apply styles
-		CharCreateSelectCustomizationType(CharacterCreateFrame.customizationType or 1);
+
+		CharCreate_PrepPreviewModels();
+		if ( CharacterCreateFrame.customizationType ) then
+			CharCreate_ResetFeaturesDisplay();
+		else
+			CharCreateSelectCustomizationType(1);
+		end
+
 		CharCreateOkayButton:SetText(FINISH);
 		CharacterCreateNameEdit:Show();
 		if ( ALLOW_RANDOM_NAME_BUTTON ) then
@@ -669,6 +667,12 @@ function SetCharacterGender(sex)
 
 	CharacterCreate_UpdateHairCustomization();
 	CharacterChangeFixup();
+
+	-- Update preview models if on customization step
+	if ( CharCreatePreviewFrame:IsShown() ) then
+		CharCreate_PrepPreviewModels(true);
+		CharCreate_ResetFeaturesDisplay();
+	end
 end
 
 function CharacterCustomization_Left(id)
@@ -690,6 +694,7 @@ end
 function CharacterCreate_Randomize()
 	PlaySound("gsCharacterCreationLook");
 	RandomizeCharCustomization();
+	CharCreate_ResetFeaturesDisplay();
 end
 
 function CharacterCreateRotateRight_OnUpdate(self)
@@ -809,67 +814,63 @@ function CharacterChangeFixup()
 end
 
 function CharCreateSelectCustomizationType(newType)
-	ResetPreviewFramesModel();
-	SetPreviewFramesFeature(newType);
-	if ( newType == 1 ) then
-		CharCreatePreviewLabel:SetText(CHAR_CUSTOMIZATION1_DESC);
-	elseif ( newType == 2 ) then
-		CharCreatePreviewLabel:SetText(CHAR_CUSTOMIZATION2_DESC);
-	elseif ( newType == 3 ) then
-		CharCreatePreviewLabel:SetText(_G["HAIR_"..GetHairCustomization().."_STYLE"]);
-	elseif ( newType == 4 ) then
-		CharCreatePreviewLabel:SetText(_G["HAIR_"..GetHairCustomization().."_COLOR"]);
-	elseif ( newType == 5 ) then
-		CharCreatePreviewLabel:SetText(_G["FACIAL_HAIR_"..GetFacialHairCustomization()]);
-	end
 	-- deselect previous type selection
 	if ( CharacterCreateFrame.customizationType and CharacterCreateFrame.customizationType ~= newType ) then
 		_G["CharCreateCustomizationButton"..CharacterCreateFrame.customizationType]:SetChecked(0);
 	end
 	_G["CharCreateCustomizationButton"..newType]:SetChecked(1);
 	CharacterCreateFrame.customizationType = newType;
-	CharCreatePreviews_Display();
+	CharCreate_ResetFeaturesDisplay();
 end
 
-function CharCreateSelectFeatureVariation(button)
-	local previewFrame = button:GetParent();
-	local style = previewFrame:GetID();
-	-- uncheck previous selection
-	local lastStyle = GetSelectedFeatureVariation(CharacterCreateFrame.customizationType);
-	if ( lastStyle > 0 and lastStyle <= NUM_PREVIEW_FRAMES ) then
-		_G["CharCreatePreviewFrame"..lastStyle].button:SetChecked(0);
+function CharCreate_ResetFeaturesDisplay()
+	SetPreviewFramesFeature(CharacterCreateFrame.customizationType);
+	-- set the previews scrollframe container height
+	-- since the first and the last previews need to be in the center position when scrolled all the way
+	-- to the top or to the bottom, there will be gaps of height equal to 2 previews on each side
+	local numTotalButtons = GetNumFeatureVariations() + 4;
+	CharCreatePreviewFrame.scrollFrame.container:SetHeight(numTotalButtons * PREVIEW_FRAME_HEIGHT - PREVIEW_FRAME_Y_OFFSET);	
+
+	for _, previewFrame in pairs(CharCreatePreviewFrame.previews) do
+		previewFrame.featureType = 0;
 	end
-	previewFrame.button:SetChecked(1);
-	SelectFeatureVariation(CharacterCreateFrame.customizationType, style);
+
+	CharCreate_DisplayPreviewModels();
 end
 
-function CharCreatePreviews_Display()
-	local numStyles = GetNumFeatureVariations(CharacterCreateFrame.customizationType);
-	local activeStyle = GetSelectedFeatureVariation(CharacterCreateFrame.customizationType);
-	for previewIndex = 1, NUM_PREVIEW_FRAMES do
-		local previewFrame = _G["CharCreatePreviewFrame"..previewIndex];
-		if ( previewIndex <= numStyles ) then
-			previewFrame:Show();
-			if ( previewIndex == activeStyle ) then
-				previewFrame.button:SetChecked(1);
-			else
-				previewFrame.button:SetChecked(0);
-			end
-		else
-			previewFrame:Hide();
-		end
-	end
-	ShowPreviewFramesVariations(CharacterCreateFrame.customizationType, offset);
-end
-
-function CharCreate_SetPreviewModels()
-	SetPreviewFramesModel();
-	local cameraID = 0;
-	-- HACK: Worgen fix for portrait camera position
+function CharCreate_PrepPreviewModels(reloadModels)
+	local displayFrame = CharCreatePreviewFrame;
 	local race = GetSelectedRace();
 	local gender = GetSelectedSex();
+	local _, class = GetSelectedClass();
+	-- clear models if rebuildPreviews got flagged
+	local rebuildPreviews = displayFrame.rebuildPreviews;
+	displayFrame.rebuildPreviews = nil;
+	local hasModel = not rebuildPreviews and not reloadModels;
+	-- need to reload models if gender or race was changed, or class was swapped to or from DK
+	local classSwap = ( class == "DEATHKNIGHT" or displayFrame.lastClass == "DEATHKNIGHT" ) and ( class ~= displayFrame.lastClass );	
+	if ( displayFrame.lastRace ~= race or displayFrame.lastGender ~= gender or classSwap ) then
+		displayFrame.lastRace = race;
+		displayFrame.lastGender = gender;
+		displayFrame.lastClass = class;
+		hasModel = false;
+	end
+	-- always clear the featureType, maybe clear the model
+	for index, previewFrame in pairs(displayFrame.previews) do
+		previewFrame.hasModel = hasModel;
+		previewFrame.featureType = 0;
+		-- have to reassign displayFrame
+		if ( rebuildPreviews ) then
+			SetPreviewFrame(previewFrame.model:GetName(), index);
+		end
+	end
+
+	-- now save some global settings
+
+	-- HACK: Worgen fix for portrait camera position
+	displayFrame.cameraID = 0;
 	if ( race == WORGEN_RACE_ID and gender == SEX_MALE and not IsViewingAlteredForm() ) then
-		cameraID = 1;
+		displayFrame.cameraID = 1;
 	end
 
 	-- get data for target/camera/light
@@ -877,27 +878,186 @@ function CharCreate_SetPreviewModels()
 	if ( IsViewingAlteredForm() ) then
 		raceFileName = raceFileName.."Alt";
 	end
-	local config = MODEL_CAMERA_CONFIG[gender][raceFileName];
-	local scale = CharCreatePreviewFrame1Model:GetWorldScale();		-- all models should be using same scale
-	-- load models and configure
-	for i = 1, NUM_PREVIEW_FRAMES do
-		local model = _G["CharCreatePreviewFrame"..i].model;
-		model:SetCustomCamera(cameraID);
-		model:SetCameraTarget(config.tx * scale, config.ty * scale, config.tz * scale);
-		model:SetCameraDistance(config.distance * scale);
-		local cx, cy, cz = model:GetCameraPosition();
-		model:SetCameraPosition(cx, cy, config.cz * scale);
-		model:SetLight(1, 0, 0, 0, 0, config.light, 1.0, 1.0, 1.0);
-	end
-	CharCreate_RotatePreviews();
+	displayFrame.config = MODEL_CAMERA_CONFIG[gender][raceFileName];
 end
 
-function CharCreate_RotatePreviews()
-	local facing = ((GetCharacterCreateFacing())/ -180) * math.pi;
-	for i = 1, NUM_PREVIEW_FRAMES do
-		local model = _G["CharCreatePreviewFrame"..i].model;
-		if ( model:HasCustomCamera() ) then
-			model:SetCameraFacing(facing);
+function CharCreate_DisplayPreviewModels(selectionIndex)
+	if ( not selectionIndex ) then
+		selectionIndex = GetSelectedFeatureVariation();
+	end
+
+	local displayFrame = CharCreatePreviewFrame;
+	local previews = displayFrame.previews;
+	local numVariations = GetNumFeatureVariations();
+	local currentFeatureType = CharacterCreateFrame.customizationType;
+
+	-- selection index is the center preview
+	-- there are 2 previews above and 2 below, and will pad it out to 1 more on each side, for a total of 7 previews to set up
+	for index = selectionIndex - 3, selectionIndex + 3 do
+		-- there is empty space both at the beginning and at end of the list, each gap the height of 2 previews
+		if ( index > 0 and index <= numVariations ) then
+			local previewFrame = previews[index];
+			-- create button if we don't have it yet
+			if ( not previewFrame ) then
+				previewFrame = CreateFrame("FRAME", "PreviewFrame"..index, displayFrame.scrollFrame.container, "CharCreatePreviewFrameTemplate");
+				-- index + 1 because of 2 gaps at the top and -1 for the current preview
+				previewFrame:SetPoint("TOPLEFT", PREVIEW_FRAME_X_OFFSET, (index + 1) * -PREVIEW_FRAME_HEIGHT + PREVIEW_FRAME_Y_OFFSET);
+				previewFrame.button.index = index;
+				previews[index] = previewFrame;
+				SetPreviewFrame(previewFrame.model:GetName(), index);
+			end
+			-- load model if needed, may have been cleared by different race/gender selection
+			if ( not previewFrame.hasModel ) then
+				SetPreviewFrameModel(index);
+				previewFrame.hasModel = true;
+				-- apply settings
+				local model = previewFrame.model;
+				model:SetCustomCamera(displayFrame.cameraID);
+				local scale = model:GetWorldScale();
+				local config = displayFrame.config;
+				model:SetCameraTarget(config.tx * scale, config.ty * scale, config.tz * scale);
+				model:SetCameraDistance(config.distance * scale);
+				local cx, cy, cz = model:GetCameraPosition();
+				model:SetCameraPosition(cx, cy, config.cz * scale);
+				model:SetLight(1, 0, 0, 0, 0, config.light, 1.0, 1.0, 1.0);
+			end
+			-- need to reset the model if it was last used to preview a different feature
+			if ( previewFrame.featureType ~= currentFeatureType ) then
+				ResetPreviewFrameModel(index);
+				ShowPreviewFrameVariation(index);
+				previewFrame.featureType = currentFeatureType;
+			end
+			previewFrame:Show();
+		else
+			-- need to hide tail previews when going to features with fewer styles
+			if ( previews[index] ) then
+				previews[index]:Hide();
+			end
 		end
+	end
+	displayFrame.border.number:SetText(selectionIndex);
+	displayFrame.selectionIndex = selectionIndex;
+	CharCreate_RotatePreviews();
+	CharCreatePreviewFrame_UpdateStyleButtons();
+	-- scroll to center the selection
+	if ( not displayFrame.animating ) then
+		displayFrame.scrollFrame:SetVerticalScroll((selectionIndex - 1) * PREVIEW_FRAME_HEIGHT);
+	end
+end
+
+
+function CharCreate_RotatePreviews()
+	if ( CharCreatePreviewFrame:IsShown() ) then
+		local facing = ((GetCharacterCreateFacing())/ -180) * math.pi;
+		local previews = CharCreatePreviewFrame.previews;
+		for index = CharCreatePreviewFrame.selectionIndex - 3, CharCreatePreviewFrame.selectionIndex + 3 do
+			local previewFrame = previews[index];
+			if ( previewFrame and previewFrame.model:HasCustomCamera() ) then
+				previewFrame.model:SetCameraFacing(facing);
+			end
+		end
+	end
+end
+
+function CharCreate_ChangeFeatureVariation(delta)
+	local numVariations = GetNumFeatureVariations();
+	local startIndex = GetSelectedFeatureVariation();
+	local endIndex = startIndex + delta;
+	if ( endIndex < 1 or endIndex > numVariations ) then
+		return;
+	end
+	PlaySound("gsCharacterCreationClass");
+	CharCreatePreviewFrame_SelectFeatureVariation(endIndex);
+end
+
+function CharCreatePreviewFrameButton_OnClick(self)
+	PlaySound("gsCharacterCreationClass");
+	CharCreatePreviewFrame_SelectFeatureVariation(self.index);
+end
+
+function CharCreatePreviewFrame_SelectFeatureVariation(endIndex)
+	local self = CharCreatePreviewFrame;
+	if ( self.animating ) then
+		if ( not self.queuedIndex ) then
+			self.queuedIndex = endIndex;
+		end
+	else
+		local startIndex = GetSelectedFeatureVariation();
+		SelectFeatureVariation(endIndex);
+		CharCreatePreviewFrame_UpdateStyleButtons();
+		CharCreatePreviewFrame_StartAnimating(startIndex, endIndex);
+	end
+end
+
+function CharCreatePreviewFrame_StartAnimating(startIndex, endIndex)
+	local self = CharCreatePreviewFrame;
+	if ( self.animating ) then
+		return;
+	else
+		self.startIndex = startIndex;
+		self.currentIndex = startIndex;
+		self.endIndex = endIndex;
+		self.queuedIndex = nil;
+		self.direction = 1;
+		if ( self.startIndex > self.endIndex ) then
+			self.direction = -1;
+		end
+		self.movedTotal = 0;
+		self.moveUntilUpdate = PREVIEW_FRAME_HEIGHT;
+		self.animating = true;
+	end
+end
+
+function CharCreatePreviewFrame_StopAnimating()
+	local self = CharCreatePreviewFrame;
+	if ( self.animating ) then
+		self.animating = false;
+	end
+end
+
+local ANIMATION_SPEED = 5;
+function CharCreatePreviewFrame_OnUpdate(self, elapsed)
+	if ( self.animating ) then
+		local moveIncrement = PREVIEW_FRAME_HEIGHT * elapsed * ANIMATION_SPEED;
+		self.movedTotal = self.movedTotal + moveIncrement;
+		self.scrollFrame:SetVerticalScroll((self.startIndex - 1) * PREVIEW_FRAME_HEIGHT + self.movedTotal * self.direction);		
+		self.moveUntilUpdate = self.moveUntilUpdate - moveIncrement;
+		if ( self.moveUntilUpdate <= 0 ) then
+			self.currentIndex = self.currentIndex + self.direction;
+			self.moveUntilUpdate = PREVIEW_FRAME_HEIGHT;
+			-- reset movedTotal to account for rounding errors
+			self.movedTotal = abs(self.startIndex - self.currentIndex) * PREVIEW_FRAME_HEIGHT;
+			CharCreate_DisplayPreviewModels(self.currentIndex);
+		end
+		if ( self.currentIndex == self.endIndex ) then
+			self.animating = false;
+			CharCreate_DisplayPreviewModels();
+			if ( self.queuedIndex ) then
+				local newIndex = self.queuedIndex;
+				self.queuedIndex = nil;
+				SelectFeatureVariation(newIndex);
+				CharCreatePreviewFrame_UpdateStyleButtons();
+				CharCreatePreviewFrame_StartAnimating(self.endIndex, newIndex);	
+			end
+		end
+	end
+end
+
+function CharCreatePreviewFrame_UpdateStyleButtons()
+	local selectionIndex = GetSelectedFeatureVariation();
+	local numVariations = GetNumFeatureVariations();
+	if ( selectionIndex == 1 ) then
+		CharCreateStyleUpButton:SetEnabled(false);
+		CharCreateStyleUpButton.arrow:SetDesaturated(true);
+	else
+		CharCreateStyleUpButton:SetEnabled(true);
+		CharCreateStyleUpButton.arrow:SetDesaturated(false);
+	end
+	if ( selectionIndex == numVariations ) then
+		CharCreateStyleDownButton:SetEnabled(false);
+		CharCreateStyleDownButton.arrow:SetDesaturated(true);
+	else
+		CharCreateStyleDownButton:SetEnabled(true);
+		CharCreateStyleDownButton.arrow:SetDesaturated(false);
 	end
 end

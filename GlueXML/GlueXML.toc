@@ -5,6 +5,7 @@ GlueFontStyles.xml
 GlueLocalization.xml
 ## add new files after here
 
+..\FrameXML\Util.lua
 GlueBasicControls.xml
 GlueParent.xml
 GlueButtons.xml
