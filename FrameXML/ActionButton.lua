@@ -1,6 +1,7 @@
 CURRENT_ACTIONBAR_PAGE = 1;
 NUM_ACTIONBAR_PAGES = 6;
 NUM_ACTIONBAR_BUTTONS = 12;
+NUM_OVERRIDE_BUTTONS = 6;
 ATTACK_BUTTON_FLASH_TIME = 0.4;
 
 BOTTOMLEFT_ACTIONBAR_PAGE = 6;
@@ -12,15 +13,25 @@ RANGE_INDICATOR = "●";
 -- Table of actionbar pages and whether they're viewable or not
 VIEWABLE_ACTION_BAR_PAGES = {1, 1, 1, 1, 1, 1};
 
+local isInPetBattle = C_PetBattles.IsInBattle;
 function ActionButtonDown(id)
+	if ( isInPetBattle() ) then
+		if ( PetBattleFrame ) then
+			PetBattleFrame_ButtonDown(id);
+		end
+		return;
+	end
+
 	local button;
-	if ( VehicleMenuBar:IsShown() and id <= VEHICLE_MAX_ACTIONBUTTONS ) then
-		button = _G["VehicleMenuBarActionButton"..id];
-	elseif ( BonusActionBarFrame:IsShown() ) then
-		button = _G["BonusActionButton"..id];
+	if ( OverrideActionBar and OverrideActionBar:IsShown() ) then
+		if ( id > NUM_OVERRIDE_BUTTONS ) then
+			return;
+		end
+		button = _G["OverrideActionBarButton"..id];
 	else
 		button = _G["ActionButton"..id];
 	end
+
 	if ( button:GetButtonState() == "NORMAL" ) then
 		button:SetButtonState("PUSHED");
 	end
@@ -31,14 +42,23 @@ function ActionButtonDown(id)
 end
 
 function ActionButtonUp(id)
+	if ( isInPetBattle() ) then
+		if ( PetBattleFrame ) then
+			PetBattleFrame_ButtonUp(id);
+		end
+		return;
+	end
+
 	local button;
-	if ( VehicleMenuBar:IsShown() and id <= VEHICLE_MAX_ACTIONBUTTONS ) then
-		button = _G["VehicleMenuBarActionButton"..id];
-	elseif ( BonusActionBarFrame:IsShown() ) then
-		button = _G["BonusActionButton"..id];
+	if ( OverrideActionBar and OverrideActionBar:IsShown() ) then
+		if ( id > NUM_OVERRIDE_BUTTONS ) then
+			return;
+		end
+		button = _G["OverrideActionBarButton"..id];
 	else
 		button = _G["ActionButton"..id];
 	end
+	
 	if ( button:GetButtonState() == "PUSHED" ) then
 		button:SetButtonState("NORMAL");
 		if (not GetCVarBool("ActionButtonUseKeyDown")) then
@@ -88,7 +108,6 @@ function ActionBarButtonEventsFrame_OnLoad(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD");
 	self:RegisterEvent("ACTIONBAR_SHOWGRID");
 	self:RegisterEvent("ACTIONBAR_HIDEGRID");
-	self:RegisterEvent("ACTIONBAR_PAGE_CHANGED");
 	self:RegisterEvent("ACTIONBAR_SLOT_CHANGED");
 	self:RegisterEvent("UPDATE_BINDINGS");
 	self:RegisterEvent("UPDATE_SHAPESHIFT_FORM");
@@ -116,6 +135,7 @@ function ActionBarActionEventsFrame_OnLoad(self)
 	--self:RegisterEvent("ACTIONBAR_UPDATE_STATE");			not updating state from lua anymore, see SetActionUIButton
 	self:RegisterEvent("ACTIONBAR_UPDATE_USABLE");
 	--self:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN");		not updating cooldown from lua anymore, see SetActionUIButton
+	self:RegisterEvent("SPELL_UPDATE_CHARGES");
 	self:RegisterEvent("UPDATE_INVENTORY_ALERTS");
 	self:RegisterEvent("PLAYER_TARGET_CHANGED");
 	self:RegisterEvent("TRADE_SKILL_SHOW");
@@ -201,16 +221,10 @@ function ActionButton_CalculateAction (self, button)
 		local page = SecureButton_GetModifiedAttribute(self, "actionpage", button);
 		if ( not page ) then
 			page = GetActionBarPage();
-			if ( self.isBonus and (page == 1 or self.alwaysBonus) ) then
-				local offset = GetBonusBarOffset();
-				if ( offset == 0 and BonusActionBarFrame and BonusActionBarFrame.lastBonusBar ) then
-					offset = BonusActionBarFrame.lastBonusBar;
-				end
-				page = NUM_ACTIONBAR_PAGES + offset;
-			elseif ( self.isExtra ) then
-				page = NUM_ACTIONBAR_PAGES + GetExtraBarOffset();
+			if ( self.isExtra ) then
+				page = GetExtraBarIndex();
 			elseif ( self.buttonType == "MULTICASTACTIONBUTTON" ) then
-				page = NUM_ACTIONBAR_PAGES + GetMultiCastBarOffset();
+				page = GetMultiCastBarIndex();
 			end
 		end
 		return (self:GetID() + ((page - 1) * NUM_ACTIONBAR_BUTTONS));
@@ -232,9 +246,9 @@ function ActionButton_Update (self)
 	local name = self:GetName();
 
 	local action = self.action;
-	local icon = _G[name.."Icon"];
-	local buttonCooldown = _G[name.."Cooldown"];
-	local texture = GetActionTexture(action);	
+	local icon = self.icon;
+	local buttonCooldown = self.cooldown;
+	local texture = GetActionTexture(action);
 
 	if ( HasAction(action) ) then
 		if ( not self.eventsRegistered ) then
@@ -276,7 +290,7 @@ function ActionButton_Update (self)
 	-- Update Action Text
 	local actionName = _G[name.."Name"];
 	if actionName then
-		if ( not IsConsumableAction(action) and not IsStackableAction(action) ) then
+		if ( not IsConsumableAction(action) and not IsStackableAction(action) and (IsItemAction(action) or GetActionCount(action) == 0) ) then
 			actionName:SetText(GetActionText(action));
 		else
 			actionName:SetText("");
@@ -288,7 +302,9 @@ function ActionButton_Update (self)
 		icon:SetTexture(texture);
 		icon:Show();
 		self.rangeTimer = -1;
+		ActionButton_UpdateCount(self);	
 	else
+		_G[self:GetName().."Count"]:SetText("");
 		icon:Hide();
 		buttonCooldown:Hide();
 		self.rangeTimer = nil;
@@ -299,7 +315,6 @@ function ActionButton_Update (self)
 			hotkey:SetVertexColor(0.6, 0.6, 0.6);
 		end
 	end
-	ActionButton_UpdateCount(self);	
 	
 	-- Update flyout appearance
 	ActionButton_UpdateFlyout(self);
@@ -381,7 +396,7 @@ end
 function ActionButton_UpdateCount (self)
 	local text = _G[self:GetName().."Count"];
 	local action = self.action;
-	if ( IsConsumableAction(action) or IsStackableAction(action) ) then
+	if ( IsConsumableAction(action) or IsStackableAction(action) or (not IsItemAction(action) and GetActionCount(action) > 0) ) then
 		local count = GetActionCount(action);
 		if ( count > (self.maxDisplayCount or 9999 ) ) then
 			text:SetText("*");
@@ -389,13 +404,18 @@ function ActionButton_UpdateCount (self)
 			text:SetText(count);
 		end
 	else
-		text:SetText("");
+		local charges, maxCharges, chargeStart, chargeDuration = GetActionCharges(action);
+		if (maxCharges > 1) then
+			text:SetText(charges);
+		else
+			text:SetText("");
+		end
 	end
 end
 
 function ActionButton_UpdateCooldown (self)
-	local start, duration, enable = GetActionCooldown(self.action);
-	CooldownFrame_SetTimer(self.cooldown, start, duration, enable);
+	local start, duration, enable, charges, maxCharges = GetActionCooldown(self.action);
+	CooldownFrame_SetTimer(self.cooldown, start, duration, enable, charges, maxCharges);
 end
 
 --Overlay stuff
@@ -479,16 +499,16 @@ function ActionButton_OnEvent (self, event, ...)
 		end
 		return;
 	end
-	if ( event == "PLAYER_ENTERING_WORLD" or event == "UPDATE_SHAPESHIFT_FORM" ) then
-		-- need to listen for UPDATE_SHAPESHIFT_FORM because attack icons change when the shapeshift form changes
+	if ( event == "PLAYER_ENTERING_WORLD" ) then
 		ActionButton_Update(self);
 		return;
 	end
-	if ( event == "ACTIONBAR_PAGE_CHANGED" or event == "UPDATE_BONUS_ACTIONBAR" or event == "UPDATE_EXTRA_ACTIONBAR" ) then
-		ActionButton_UpdateAction(self);
-		local actionType, id, subType = GetActionInfo(self.action);
-		if ( actionType == "spell" and id == 0 ) then
-			ActionButton_HideOverlayGlow(self);
+	if ( event == "UPDATE_SHAPESHIFT_FORM" ) then
+		-- need to listen for UPDATE_SHAPESHIFT_FORM because attack icons change when the shapeshift form changes
+		-- This is NOT intended to update everything about shapeshifting; most stuff should be handled by ActionBar-specific events such as UPDATE_BONUS_ACTIONBAR, UPDATE_USABLE, etc.
+		local texture = GetActionTexture(self.action);
+		if (texture) then
+			self.icon:SetTexture(texture);
 		end
 		return;
 	end
@@ -562,6 +582,8 @@ function ActionButton_OnEvent (self, event, ...)
 				ActionButton_HideOverlayGlow(self);
 			end
 		end
+	elseif ( event == "SPELL_UPDATE_CHARGES" ) then
+		ActionButton_UpdateCount(self);
 	end
 end
 

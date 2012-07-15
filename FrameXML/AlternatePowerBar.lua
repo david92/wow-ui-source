@@ -10,6 +10,14 @@ function AlternatePowerBar_OnLoad(self)
 end
 
 function AlternatePowerBar_Initialize(self)
+	local _, class = UnitClass("player");
+	if ( class == "MONK" ) then
+		-- ninja!
+		self = PlayerFrameMonkManaBar;
+		self.specRestriction = SPEC_MONK_MISTWEAVER;
+		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED");
+	end
+	
 	if ( not self.powerName ) then
 		self.powerName = ADDITIONAL_POWER_BAR_NAME;
 		self.powerIndex = ADDITIONAL_POWER_BAR_INDEX;
@@ -28,11 +36,10 @@ end
 
 function AlternatePowerBar_OnEvent(self, event, arg1)
 	local parent = self:GetParent();
-	if ( event == "UNIT_DISPLAYPOWER" ) then
+	if ( event == "UNIT_DISPLAYPOWER" or event == "PLAYER_SPECIALIZATION_CHANGED" ) then
 		AlternatePowerBar_UpdatePowerType(self);
 	elseif ( event=="PLAYER_ENTERING_WORLD" ) then
 		AlternatePowerBar_UpdateMaxValues(self);
-		AlternatePowerBar_UpdateValue(self);
 		AlternatePowerBar_UpdatePowerType(self);
 	elseif( (event == "UNIT_MAXPOWER") and (arg1 == parent.unit) ) then
 		AlternatePowerBar_UpdateMaxValues(self);
@@ -59,8 +66,9 @@ function AlternatePowerBar_UpdateMaxValues(self)
 end
 
 function AlternatePowerBar_UpdatePowerType(self)
-	if ( (UnitPowerType(self:GetParent().unit) ~= self.powerIndex) and (UnitPowerMax(self:GetParent().unit,self.powerIndex) ~= 0) ) then
+	if ( (UnitPowerType(self:GetParent().unit) ~= self.powerIndex) and (UnitPowerMax(self:GetParent().unit,self.powerIndex) ~= 0) and ( not self.specRestriction or self.specRestriction == GetSpecialization() ) ) then
 		self.pauseUpdates = false;
+		AlternatePowerBar_UpdateValue(self);
 		self:Show();
 	else
 		self.pauseUpdates = true;

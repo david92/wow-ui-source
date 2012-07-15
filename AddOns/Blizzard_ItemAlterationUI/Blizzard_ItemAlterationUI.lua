@@ -25,13 +25,6 @@ function TransmogrifyFrame_OnLoad(self)
 	TransmogrifyArtFrameBg:Hide();
 	SetPortraitToTexture(TransmogrifyArtFramePortrait, "Interface\\Icons\\INV_Arcane_Orb");
 
-	if ( not UnitHasRelicSlot("player") ) then
-		local button = CreateFrame("BUTTON", "TransmogrifyFrameRangedSlot", TransmogrifyFrame, "TransmogrifyBottomSlotButtonTemplate");
-		button:SetPoint("LEFT", TransmogrifyFrameSecondaryHandSlot, "RIGHT", 14, 0);
-		TransmogrifyFrameMainHandSlot:SetPoint("BOTTOM", TransmogrifyArtFrameBottomEdge, "TOP", -51, -3);
-		TransmogrifyFrame.ranged = button;
-	end
-
 	RaiseFrameLevel(TransmogrifyArtFrame);
 	RaiseFrameLevelByTwo(TransmogrifyFrameButtonFrame);
 	TransmogrifyArtFrameCloseButton:SetScript("OnClick", function() HideUIPanel(TransmogrifyFrame); end);
@@ -135,20 +128,6 @@ function TransmogrifyFrame_OnShow(self)
 	end
 	TransmogrifyModelFrame:SetUnit("player");
 	Model_Reset(TransmogrifyModelFrame);
-	-- sheath state: 1 = unarmed, 2 = melee, 3 = ranged
-	local sheathState = GetSheathState();
-	if ( sheathState == 3 ) then
-		self.showMelee = nil;
-	elseif ( sheathState == 2 ) then
-		self.showMelee = true;
-	else
-		local _, class = UnitClass("player");
-		if ( class == "HUNTER" ) then
-			self.showMelee = nil;
-		else
-			self.showMelee = true;
-		end
-	end
 	self.headSlot.displayHelm = ShowingHelm();
 	self.backSlot.displayCloak = ShowingCloak();
 	TransmogrifyFrame_Update(self);
@@ -291,6 +270,17 @@ function TransmogrifySlotButton_OnLeave(self)
 end
 
 function TransmogrifyFrame_Update(self)
+	-- ranged trickery
+	if (GetInventoryItemID("player",INVSLOT_RANGED) ~= nil) then
+		TransmogrifyFrameRangedSlot:Show();
+		TransmogrifyFrameMainHandSlot:Hide();
+		TransmogrifyFrame.showMelee = false;
+	else
+		TransmogrifyFrameRangedSlot:Hide();
+		TransmogrifyFrameMainHandSlot:Show();
+		TransmogrifyFrame.showMelee = true;
+	end
+
 	for _, button in pairs(BUTTONS) do
 		TransmogrifyFrame_UpdateSlotButton(button);
 	end

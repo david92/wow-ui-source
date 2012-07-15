@@ -26,6 +26,7 @@ local ErrorCodes =
 	VRN_NEEDS_5_0,
 	VRN_MACOS_UNSUPPORTED,
 	VRN_WINDOWS_UNSUPPORTED,
+	VRN_WINDOWS_32BIT,
 	VRN_NEEDS_MACOS_10_5_5,
 	VRN_NEEDS_MACOS_10_5_7,
 	VRN_NEEDS_MACOS_10_5_8,
@@ -734,7 +735,7 @@ function VideoOptionsPanel_OnShow(self)
 end
 
 function Graphics_OnLoad (self)
-	if(IsGMClient() and InGlue()) then
+	if(nil and IsGMClient() and InGlue()) then
 		local qualityNames =
 		{
 			VIDEO_QUALITY_LABEL1,
@@ -867,6 +868,7 @@ function InterfaceOptionsLanguagesPanelLocaleDropDown_OnLoad (self)
 				self.RestartNeeded:Hide();
 			end
 			VideoOptionsDropDownMenu_SetSelectedValue(self, value);
+			self.oldValue = value;
 		end
 	self.GetValue =
 		function (self)
@@ -905,6 +907,7 @@ LanguageRegions["esMX"] = 10;
 LanguageRegions["ruRU"] = 11;
 LanguageRegions["ptBR"] = 12;
 LanguageRegions["ptPT"] = 13;
+LanguageRegions["itIT"] = 14;
 
 LANGUAGE_TEXT_HEIGHT = 22/512;
 

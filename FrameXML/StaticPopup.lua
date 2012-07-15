@@ -78,13 +78,15 @@ StaticPopupDialogs["CONFIRM_REMOVE_GLYPH"] = {
 	button2 = NO,
 	OnAccept = function (self)
 		local talentGroup = PlayerTalentFrame and PlayerTalentFrame.talentGroup or 1;
-		if ( talentGroup == GetActiveTalentGroup() ) then
+		if ( talentGroup == GetActiveSpecGroup() ) then
 			RemoveGlyphFromSocket(self.data.id);
 		end
 	end,
 	OnShow = function(self)
 		local name, count, _, _, cost = GetGlyphClearInfo();
-		if count >= cost then
+		if cost == 0 then
+			self.text:SetFormattedText(CONFIRM_REMOVE_GLYPH_NO_COST, self.data.name);
+		elseif count >= cost then
 			self.text:SetFormattedText(CONFIRM_REMOVE_GLYPH, self.data.name, GREEN_FONT_COLOR_CODE, cost, name);
 		else
 			self.text:SetFormattedText(CONFIRM_REMOVE_GLYPH, self.data.name, RED_FONT_COLOR_CODE, cost, name);
@@ -107,7 +109,9 @@ StaticPopupDialogs["CONFIRM_GLYPH_PLACEMENT"] = {
 	end,
 	OnShow = function(self)
 		local name, count, _, _, cost = GetGlyphClearInfo();
-		if count >= cost then
+		if cost == 0 then
+			self.text:SetFormattedText(CONFIRM_GLYPH_PLACEMENT_NO_COST);
+		elseif count >= cost then
 			self.text:SetFormattedText(CONFIRM_GLYPH_PLACEMENT, GREEN_FONT_COLOR_CODE, cost, name);
 		else
 			self.text:SetFormattedText(CONFIRM_GLYPH_PLACEMENT, RED_FONT_COLOR_CODE, cost, name);
@@ -498,6 +502,18 @@ StaticPopupDialogs["CONFIRM_RESET_INSTANCES"] = {
 	hideOnEscape = 1,
 };
 
+StaticPopupDialogs["CONFIRM_RESET_CHALLENGE_MODE"] = {
+	text = CONFIRM_RESET_CHALLENGE_MODE,
+	button1 = YES,
+	button2 = NO,
+	OnAccept = function(self)
+		ResetChallengeMode();
+	end,
+	timeout = 0,
+	whileDead = 1,
+	hideOnEscape = 1,
+};
+
 StaticPopupDialogs["CONFIRM_GUILD_DISBAND"] = {
 	text = CONFIRM_GUILD_DISBAND,
 	button1 = YES,
@@ -553,7 +569,11 @@ StaticPopupDialogs["CONFIRM_LOOT_DISTRIBUTION"] = {
 	button1 = YES,
 	button2 = NO,
 	OnAccept = function(self, data)
-		GiveMasterLoot(LootFrame.selectedSlot, data);
+		if ( data == "LootWindow" ) then
+			MasterLooterFrame_GiveMasterLoot();
+		elseif ( data == "LootHistory" ) then
+			LootHistoryDropDown_GiveMasterLoot();
+		end
 	end,
 	timeout = 0,
 	hideOnEscape = 1,
@@ -946,6 +966,32 @@ StaticPopupDialogs["CONFIRM_REPORT_SPAM_CHAT"] = {
 	hideOnEscape = 1
 };
 
+StaticPopupDialogs["CONFIRM_REPORT_BATTLEPET_NAME"] = {
+	text = REPORT_BATTLEPET_NAME_CONFIRMATION,
+	button1 = ACCEPT,
+	button2 = CANCEL,
+	OnAccept = function(self)
+		ReportPlayer(PLAYER_REPORT_TYPE_BAD_BATTLEPET_NAME);		
+	end,
+	timeout = 0,
+	whileDead = 1,
+	exclusive = 1,
+	hideOnEscape = 1
+};
+
+StaticPopupDialogs["CONFIRM_REPORT_PET_NAME"] = {
+	text = REPORT_PET_NAME_CONFIRMATION,
+	button1 = ACCEPT,
+	button2 = CANCEL,
+	OnAccept = function(self)
+		ReportPlayer(PLAYER_REPORT_TYPE_BAD_PET_NAME);		
+	end,
+	timeout = 0,
+	whileDead = 1,
+	exclusive = 1,
+	hideOnEscape = 1
+};
+
 StaticPopupDialogs["CONFIRM_REPORT_BAD_LANGUAGE_CHAT"] = {
 	text = REPORT_BAD_LANGUAGE_CONFIRMATION,
 	button1 = ACCEPT,
@@ -1263,16 +1309,24 @@ StaticPopupDialogs["DEATH"] = {
 		end
 	end,
 	OnUpdate = function(self, elapsed)
-		if ( IsFalling() and (not IsOutOfBounds()) ) then
+		if ( IsFalling() and not IsOutOfBounds()) then
 			self.button1:Disable();
 			self.button2:Disable();
-		elseif ( HasSoulstone() ) then	--Bug ID 153643
-			self.button1:Enable();
-			self.button2:Enable();
+			return;
+		end
+
+		if ( IsEncounterInProgress() ) then
+			self.button1:Disable();
 		else
 			self.button1:Enable();
+		end
+
+		if( HasSoulstone() and CanUseSoulstone() ) then
+			self.button2:Enable();
+		else
 			self.button2:Disable();
 		end
+
 	end,
 	DisplayButton2 = function(self)
 		return HasSoulstone();
@@ -1399,6 +1453,31 @@ StaticPopupDialogs["TRADE"] = {
 };
 StaticPopupDialogs["PARTY_INVITE"] = {
 	text = INVITATION,
+	button1 = ACCEPT,
+	button2 = DECLINE,
+	sound = "igPlayerInvite",
+	OnShow = function(self)
+		self.inviteAccepted = nil;
+	end,
+	OnAccept = function(self)
+		AcceptGroup();
+		self.inviteAccepted = 1;
+	end,
+	OnCancel = function(self)
+		DeclineGroup();
+	end,
+	OnHide = function(self)
+		if ( not self.inviteAccepted ) then
+			DeclineGroup();
+			self:Hide();
+		end
+	end,
+	timeout = STATICPOPUP_TIMEOUT,
+	whileDead = 1,
+	hideOnEscape = 1
+};
+StaticPopupDialogs["PARTY_INVITE_XREALM"] = {
+	text = INVITATION_XREALM,
 	button1 = ACCEPT,
 	button2 = DECLINE,
 	sound = "igPlayerInvite",
@@ -2053,7 +2132,7 @@ StaticPopupDialogs["ADD_RAIDMEMBER"] = {
 	autoCompleteParams = AUTOCOMPLETE_LIST.INVITE,
 	maxLetters = 12,
 	OnAccept = function(self)
-		InviteUnit(self.editBox:GetText());
+		InviteToGroup(self.editBox:GetText());
 	end,
 	OnShow = function(self)
 		self.editBox:SetFocus();
@@ -2064,7 +2143,7 @@ StaticPopupDialogs["ADD_RAIDMEMBER"] = {
 	end,
 	EditBoxOnEnterPressed = function(self)
 		local parent = self:GetParent();
-		InviteUnit(parent.editBox:GetText());
+		InviteToGroup(parent.editBox:GetText());
 		parent:Hide();
 	end,
 	EditBoxOnEscapePressed = function(self)
@@ -2073,6 +2152,19 @@ StaticPopupDialogs["ADD_RAIDMEMBER"] = {
 	timeout = 0,
 	exclusive = 1,
 	hideOnEscape = 1
+};
+StaticPopupDialogs["CONVERT_TO_RAID"] = {
+	text = CONVERT_TO_RAID_LABEL,
+	button1 = CONVERT,
+	button2 = CANCEL,
+	OnAccept = function(self, data)
+		ConvertToRaid();
+		InviteUnit(data);
+	end,
+	timeout = 0,
+	exclusive = 1,
+	hideOnEscape = 1,
+	showAlert = 1
 };
 StaticPopupDialogs["REMOVE_GUILDMEMBER"] = {
 	text = format(REMOVE_GUILDMEMBER_LABEL, "XXX"),
@@ -2211,6 +2303,34 @@ StaticPopupDialogs["DUEL_REQUESTED"] = {
 StaticPopupDialogs["DUEL_OUTOFBOUNDS"] = {
 	text = DUEL_OUTOFBOUNDS_TIMER,
 	timeout = 10,
+};
+StaticPopupDialogs["PET_BATTLE_PVP_DUEL_REQUESTED"] = {
+	text = PET_BATTLE_PVP_DUEL_REQUESTED,
+	button1 = ACCEPT,
+	button2 = DECLINE,
+	sound = "igPlayerInvite",
+	OnAccept = function(self)
+		C_PetBattles.AcceptPVPDuel();
+	end,
+	OnCancel = function(self)
+		C_PetBattles.CancelPVPDuel();
+	end,
+	timeout = STATICPOPUP_TIMEOUT,
+	hideOnEscape = 1
+};
+StaticPopupDialogs["PET_BATTLE_QUEUE_PROPOSE_MATCH"] = {
+	text = PET_BATTLE_QUEUE_PROPOSE_MATCH,
+	button1 = ACCEPT,
+	button2 = DECLINE,
+	sound = "igPlayerInvite",
+	OnAccept = function(self)
+		C_PetBattles.AcceptPVPMatch();
+	end,
+	OnCancel = function(self)
+		C_PetBattles.DeclinePVPMatch();
+	end,
+	timeout = STATICPOPUP_TIMEOUT,
+	hideOnEscape = 1
 };
 StaticPopupDialogs["UNLEARN_SKILL"] = {
 	text = UNLEARN_SKILL,
@@ -2587,6 +2707,7 @@ StaticPopupDialogs["CONFIRM_TALENT_WIPE"] = {
 		end
 	end,
 	hasMoneyFrame = 1,
+	exclusive = 1,
 	timeout = 0,
 	hideOnEscape = 1
 };
@@ -3074,11 +3195,25 @@ StaticPopupDialogs["GUILD_IMPEACH"] = {
 	exclusive = 1,
 }
 
+StaticPopupDialogs["SPELL_CONFIRMATION_PROMPT" ] = {
+	button1 = YES,
+	button2 = NO,
+	OnAccept = function(self)
+		AcceptSpellConfirmationPrompt(self.data);
+	end,
+	OnCancel = function(self)
+		DeclineSpellConfirmationPrompt(self.data);
+	end,
+	exclusive = 0,
+	whileDead = 1,
+	hideOnEscape = 1
+}
+
 StaticPopupDialogs["CONFIRM_LAUNCH_URL"] = {
 	text = CONFIRM_LAUNCH_URL,
 	button1 = OKAY,
 	button2 = CANCEL,
-	OnAccept = function(self, data) LoadURLIndex(data); end,
+	OnAccept = function(self, data) LoadURLIndex(data.index, data.mapID); end,
 	hideOnEscape = 1,
 	timeout = 0,
 }
@@ -3275,6 +3410,10 @@ function StaticPopup_Show(which, text_arg1, text_arg2, data)
 		text.text_arg2 = text_arg2;
 	elseif ( which == "BILLING_NAG" ) then
 		text:SetFormattedText(info.text, text_arg1, MINUTES);
+	elseif ( which == "SPELL_CONFIRMATION_PROMPT" ) then
+		text:SetText(text_arg1);
+		info.text = text_arg1;
+		info.timeout = text_arg2;
 	else
 		text:SetFormattedText(info.text, text_arg1, text_arg2);
 	end
@@ -3504,7 +3643,8 @@ function StaticPopup_OnUpdate(dialog, elapsed)
 			 (which == "INSTANCE_BOOT") or
 			 (which == "CONFIRM_SUMMON") or
 			 (which == "BFMGR_INVITED_TO_ENTER") or
-			 (which == "AREA_SPIRIT_HEAL")) then
+			 (which == "AREA_SPIRIT_HEAL") or
+			 (which == "SPELL_CONFIRMATION_PROMPT")) then
 			local text = _G[dialog:GetName().."Text"];
 			local hasText = nil;
 			if ( text:GetText() ~= " " ) then
@@ -3529,6 +3669,14 @@ function StaticPopup_OnUpdate(dialog, elapsed)
 				else
 					text:SetFormattedText(StaticPopupDialogs[which].text, text.text_arg1, ceil(timeleft / 60), MINUTES);
 				end
+			elseif ( which == "SPELL_CONFIRMATION_PROMPT") then
+				local time = "";
+				if ( timeleft < 60 ) then
+					text:SetFormattedText(ERR_SPELL_FAILED_S, timeleft, SECONDS);
+				else
+					text:SetFormattedText(ERR_SPELL_FAILED_S, ceil(timeleft / 60), MINUTES);
+				end
+				text:SetText(StaticPopupDialogs[which].text .. " " ..TIME_REMAINING .. text:GetText());
 			else
 				if ( timeleft < 60 ) then
 					text:SetFormattedText(StaticPopupDialogs[which].text, timeleft, SECONDS);

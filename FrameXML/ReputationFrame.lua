@@ -17,6 +17,7 @@ MAX_PLAYER_LEVEL_TABLE[0] = 60;
 MAX_PLAYER_LEVEL_TABLE[1] = 70;
 MAX_PLAYER_LEVEL_TABLE[2] = 80;
 MAX_PLAYER_LEVEL_TABLE[3] = 85;
+MAX_PLAYER_LEVEL_TABLE[4] = 90;
 MAX_PLAYER_LEVEL = 0;
 REPUTATIONFRAME_ROWSPACING = 23;
 
@@ -125,7 +126,7 @@ end
 function ReputationFrame_Update()
 	local numFactions = GetNumFactions();
 	local factionIndex, factionRow, factionTitle, factionStanding, factionBar, factionButton, factionLeftLine, factionBottomLine, factionBackground, color, tooltipStanding;
-	local name, description, standingID, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild;
+	local name, description, standingID, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionID;
 	local atWarIndicator, rightBarTexture;
 
 	local previousBigTexture = ReputationFrameTopTreeTexture;	--In case we have a line going off the panel to the top
@@ -157,7 +158,7 @@ function ReputationFrame_Update()
 		factionStanding = _G["ReputationBar"..i.."ReputationBarFactionStanding"];
 		factionBackground = _G["ReputationBar"..i.."Background"];
 		if ( factionIndex <= numFactions ) then
-			name, description, standingID, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild = GetFactionInfo(factionIndex);
+			name, description, standingID, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionID = GetFactionInfo(factionIndex);
 			factionTitle:SetText(name);
 			if ( isCollapsed ) then
 				factionButton:SetNormalTexture("Interface\\Buttons\\UI-PlusButton-Up");
@@ -167,6 +168,18 @@ function ReputationFrame_Update()
 			factionRow.index = factionIndex;
 			factionRow.isCollapsed = isCollapsed;
 			local factionStandingtext = GetText("FACTION_STANDING_LABEL"..standingID, gender);
+
+			-- check if this is a friendship faction 
+			local friendID, friendRep, friendMaxRep, friendText, friendTexture, friendTextLevel, friendThresh = GetFriendshipReputationByID(factionID);
+
+			if (friendID ~= nil) then
+				factionStandingtext = friendTextLevel;
+				barMax = friendMaxRep - friendThresh;
+				barMax = 8400;
+				barValue = barValue - friendThresh;
+				barMin = 0;
+			end
+
 			factionStanding:SetText(factionStandingtext);
 
 			--Normalize Values
@@ -312,9 +325,11 @@ end
 
 function ReputationBar_OnClick(self)
 	if ( ReputationDetailFrame:IsShown() and (GetSelectedFaction() == self.index) ) then
+		PlaySound("igCharacterInfoClose");
 		ReputationDetailFrame:Hide();
 	else
 		if ( self.hasRep ) then
+			PlaySound("igCharacterInfoOpen");
 			SetSelectedFaction(self.index);
 			ReputationDetailFrame:Show();
 			ReputationFrame_Update();
@@ -412,7 +427,7 @@ function ReputationWatchBar_Update(newLevel)
 	
 	-- update the xp bar
 	TextStatusBar_UpdateTextString(MainMenuExpBar);
-	MainMenuExpBar_Update();
+	ExpBar_Update();
 	
 	if ( visibilityChanged ) then
 		UIParent_ManageFramePositions();

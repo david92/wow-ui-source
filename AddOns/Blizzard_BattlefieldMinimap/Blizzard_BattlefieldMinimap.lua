@@ -43,8 +43,7 @@ function BattlefieldMinimap_OnLoad (self)
 	self:RegisterEvent("PLAYER_LOGOUT");
 	self:RegisterEvent("WORLD_MAP_UPDATE");
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA");
-	self:RegisterEvent("PARTY_MEMBERS_CHANGED");
-	self:RegisterEvent("RAID_ROSTER_UPDATE");
+	self:RegisterEvent("GROUP_ROSTER_UPDATE");
 
 	CreateMiniWorldMapArrowFrame(BattlefieldMinimap);
 
@@ -111,7 +110,7 @@ function BattlefieldMinimap_OnEvent(self, event, ...)
 		if ( BattlefieldMinimap:IsVisible() ) then
 			BattlefieldMinimap_Update();
 		end
-	elseif ( event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" ) then
+	elseif ( event == "GROUP_ROSTER_UPDATE" ) then
 		if ( self:IsShown() ) then
 			WorldMapFrame_UpdateUnits("BattlefieldMinimapRaid", "BattlefieldMinimapParty");
 		end
@@ -120,7 +119,7 @@ end
 
 function BattlefieldMinimap_Update()
 	-- Fill in map tiles
-	local mapFileName, textureHeight = GetMapInfo();
+	local mapFileName, textureHeight, _, isMicroDungeon, microDungeonMapName = GetMapInfo();
 	if ( not mapFileName ) then
 		if ( GetCurrentMapContinent() == WORLDMAP_COSMIC_ID ) then
 			mapFileName = "Cosmic";
@@ -134,15 +133,21 @@ function BattlefieldMinimap_Update()
 	if (DungeonUsesTerrainMap()) then
 		dungeonLevel = dungeonLevel - 1;
 	end
-	local completeMapFileName;
-	if ( dungeonLevel > 0 ) then
-		completeMapFileName = mapFileName..dungeonLevel.."_";
+
+	local path;
+	if (not isMicroDungeon) then
+		path = "Interface\\WorldMap\\"..mapFileName.."\\"..mapFileName;
 	else
-		completeMapFileName = mapFileName;
+		path = "Interface\\WorldMap\\MicroDungeon\\"..mapFileName.."\\"..microDungeonMapName.."\\"..microDungeonMapName;
 	end
+	
+	if ( dungeonLevel > 0 ) then
+		path = path..dungeonLevel.."_";
+	end
+
 	local numDetailTiles = GetNumberOfDetailTiles();
 	for i=1, numDetailTiles do
-		texName = "Interface\\WorldMap\\"..mapFileName.."\\"..completeMapFileName..i;
+		texName = path..i;
 		_G["BattlefieldMinimap"..i]:SetTexture(texName);
 	end
 
@@ -161,7 +166,7 @@ function BattlefieldMinimap_Update()
 		if ( i <= numPOIs ) then
 			local name, description, textureIndex, x, y, maplinkID, showInBattleMap = GetMapLandmarkInfo(i);
 			if ( showInBattleMap ) then
-				local x1, x2, y1, y2 = WorldMap_GetPOITextureCoords(textureIndex);
+				local x1, x2, y1, y2 = GetPOITextureCoords(textureIndex);
 				_G[battlefieldPOIName.."Texture"]:SetTexCoord(x1, x2, y1, y2);
 				x = x * BattlefieldMinimap:GetWidth();
 				y = -y * BattlefieldMinimap:GetHeight();
@@ -302,7 +307,7 @@ function BattlefieldMinimap_OnUpdate(self, elapsed)
 			if ( i <= numPOIs ) then
 				local name, description, textureIndex, x, y, maplinkID,showInBattleMap = GetMapLandmarkInfo(i);
 				if ( showInBattleMap ) then
-					local x1, x2, y1, y2 = WorldMap_GetPOITextureCoords(textureIndex);
+					local x1, x2, y1, y2 = GetPOITextureCoords(textureIndex);
 					_G[battlefieldPOIName.."Texture"]:SetTexCoord(x1, x2, y1, y2);
 					x = x * BattlefieldMinimap:GetWidth();
 					y = -y * BattlefieldMinimap:GetHeight();
@@ -328,7 +333,7 @@ function BattlefieldMinimap_OnUpdate(self, elapsed)
 	else
 		--Position groupmates
 		local playerCount = 0;
-		if ( GetNumRaidMembers() > 0 ) then
+		if ( IsInRaid() ) then
 			for i=1, MAX_PARTY_MEMBERS do
 				local partyMemberFrame = _G["BattlefieldMinimapParty"..i];
 				partyMemberFrame:Hide();
@@ -359,22 +364,6 @@ function BattlefieldMinimap_OnUpdate(self, elapsed)
 					partyMemberFrame:SetPoint("CENTER", "BattlefieldMinimap", "TOPLEFT", partyX, partyY);
 					partyMemberFrame:Show();
 				end
-			end
-		end
-		-- Position Team Members
-		local numTeamMembers = GetNumBattlefieldPositions();
-		for i=playerCount+1, MAX_RAID_MEMBERS do
-			local partyX, partyY, name = GetBattlefieldPosition(i - playerCount);
-			local partyMemberFrame = _G["BattlefieldMinimapRaid"..i];
-			if ( partyX == 0 and partyY == 0 ) then
-				partyMemberFrame:Hide();
-			else
-				partyX = partyX * BattlefieldMinimap:GetWidth();
-				partyY = -partyY * BattlefieldMinimap:GetHeight();
-				partyMemberFrame:SetPoint("CENTER", "BattlefieldMinimap", "TOPLEFT", partyX, partyY);
-				partyMemberFrame.name = name;
-				partyMemberFrame.unit = nil;
-				partyMemberFrame:Show();
 			end
 		end
 

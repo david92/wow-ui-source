@@ -557,6 +557,12 @@
 						</Offset>
 					</Anchor>
 				</Anchors>
+				<Scripts>
+					<OnClick>
+						PlaySound("igMainMenuOptionCheckBoxOn");
+						HideParentPanel(self);
+					</OnClick>
+				</Scripts>
 			</Button>
 			<Button name="GuildMemberRemoveButton" inherits="UIPanelButtonTemplate" text="REMOVE">
 				<Size>
@@ -595,7 +601,7 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						InviteUnit(GuildFrame.selectedName);
+						InviteToGroup(GuildFrame.selectedName);
 					</OnClick>
 					<OnEnter>
 						GameTooltip_AddNewbieTip(self, GROUP_INVITE, 1.0, 1.0, 1.0, NEWBIE_TOOLTIP_GROUPINVITE, 1);

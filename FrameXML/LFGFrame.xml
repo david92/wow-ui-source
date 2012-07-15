@@ -258,259 +258,6 @@
 			</OnLeave>
 		</Scripts>
 	</Frame>
-	<Frame name="LFGSearchStatusPlayerTemplate" virtual="true">
-		<Size>
-			<AbsDimension x="55" y="55"/>
-		</Size>
-		<Layers>
-			<Layer level="ARTWORK">
-				<Texture name="$parentTexture" file="Interface\LFGFrame\UI-LFG-ICON-ROLES" setAllPoints="true" parentKey="texture"/>
-			</Layer>
-			<Layer level="OVERLAY">
-				<Texture file="Interface\LFGFrame\UI-LFG-ICON-ROLES" setAllPoints="true" parentKey="cover" alpha="0.3" hidden="true">
-					<TexCoords left="0" right="0.2617" top="0.5234" bottom="0.7851"/>
-				</Texture>
-			</Layer>
-		</Layers>
-	</Frame>
-	<Frame name="LFGSearchStatusRoleWithCountTemplate" inherits="LFGSearchStatusPlayerTemplate" virtual="true">
-		<Layers>
-			<Layer level="ARTWORK">
-				<FontString name="$parentCount" inherits="GameFontHighlight" parentKey="count">
-					<Anchors>
-						<Anchor point="TOP" relativeTo="$parent" relativePoint="BOTTOM" x="0" y="-2"/>
-					</Anchors>
-				</FontString>
-			</Layer>
-		</Layers>
-	</Frame>
-	<Texture name="LFGSearchStatusRoleIconTemplate" file="Interface\LFGFrame\UI-LFG-ICON-ROLES" virtual="true">
-		<Size>
-			<AbsDimension x="25" y="25"/>
-		</Size>
-	</Texture>
-	<Frame name="LFGSearchStatus" frameStrata="TOOLTIP" hidden="true" parent="MiniMapLFGFrame">
-		<Size>
-			<AbsDimension x="350" y="153"/>
-		</Size>
-		<Anchors>
-			<Anchor point="TOPRIGHT" relativeTo="MiniMapLFGFrame" relativePoint="TOPLEFT">
-				<Offset>
-					<AbsDimension x="0" y="0"/>
-				</Offset>
-			</Anchor>
-		</Anchors>
-		<Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
-			<EdgeSize>
-				<AbsValue val="16"/>
-			</EdgeSize>
-			<TileSize>
-				<AbsValue val="16"/>
-			</TileSize>
-			<BackgroundInsets>
-				<AbsInset left="5" right="5" top="5" bottom="5"/>
-			</BackgroundInsets>
-		</Backdrop>
-		<Layers>
-			<Layer level="ARTWORK">
-				<FontString name="$parentTitle" inherits="GameFontHighlight" text="ASSEMBLING_GROUP">
-					<Anchors>
-						<Anchor point="TOP">
-							<Offset>
-								<AbsDimension x="0" y="-15"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<FontString name="$parentElapsedWaitTime" justifyH="CENTER" inherits="GameFontNormal" parentKey="elapsedWait">
-					<Anchors>
-						<Anchor point="BOTTOM">
-							<Offset>
-								<AbsDimension x="0" y="38"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<FontString name="$parentStatistic" justifyH="CENTER" justifyV="MIDDLE" inherits="GameFontNormal" parentKey="statistic">
-					<Size>
-						<AbsDimension x="330" y="25"/>
-					</Size>
-					<Anchors>
-						<Anchor point="BOTTOM" relativeTo="$parentElapsedWaitTime" relativePoint="TOP" x="0" y="2"/>
-					</Anchors>
-				</FontString>
-				<FontString name="$parentLookingFor" justifyH="CENTER" inherits="GameFontHighlight" text="SEARCHING_FOR_GROUPS_NEEDS">
-					<Anchors>
-						<Anchor point="BOTTOM">
-							<Offset>
-								<AbsDimension x="0" y="14"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<Texture name="$parentRoleIcon1" inherits="LFGSearchStatusRoleIconTemplate">
-					<Anchors>
-						<Anchor point="LEFT" relativeTo="$parentLookingFor" relativePoint="RIGHT">
-							<Offset>
-								<AbsDimension x="2" y="0"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</Texture>
-				<Texture name="$parentRoleIcon2" inherits="LFGSearchStatusRoleIconTemplate">
-					<Anchors>
-						<Anchor point="LEFT" relativeTo="$parentRoleIcon1" relativePoint="RIGHT">
-							<Offset>
-								<AbsDimension x="2" y="0"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</Texture>
-				<Texture name="$parentRoleIcon3" inherits="LFGSearchStatusRoleIconTemplate">
-					<Anchors>
-						<Anchor point="LEFT" relativeTo="$parentRoleIcon2" relativePoint="RIGHT">
-							<Offset>
-								<AbsDimension x="2" y="0"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</Texture>
-			</Layer>
-		</Layers>
-		<Frames>
-			<Frame name="$parentIndividualRoleDisplay" hidden="true">
-				<Size x="1" y="1"/>
-				<Anchors>
-					<Anchor point="TOPLEFT" x="25" y="-40"/>
-				</Anchors>
-				<Frames>
-					<Frame name="$parentTank1" inherits="LFGSearchStatusPlayerTemplate">
-						<Anchors>
-							<Anchor point="TOPLEFT"/>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("TANK"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-					<Frame name="$parentHealer1" inherits="LFGSearchStatusPlayerTemplate">
-						<Anchors>
-							<Anchor point="LEFT" relativeTo="$parentTank1" relativePoint="RIGHT">
-								<Offset>
-									<AbsDimension x="5" y="0"/>
-								</Offset>
-							</Anchor>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("HEALER"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-					<Frame name="$parentDamage1" inherits="LFGSearchStatusPlayerTemplate">
-						<Anchors>
-							<Anchor point="LEFT" relativeTo="$parentHealer1" relativePoint="RIGHT">
-								<Offset>
-									<AbsDimension x="5" y="0"/>
-								</Offset>
-							</Anchor>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("DAMAGER"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-					<Frame name="$parentDamage2" inherits="LFGSearchStatusPlayerTemplate">
-						<Anchors>
-							<Anchor point="LEFT" relativeTo="$parentDamage1" relativePoint="RIGHT">
-								<Offset>
-									<AbsDimension x="5" y="0"/>
-								</Offset>
-							</Anchor>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("DAMAGER"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-					<Frame name="$parentDamage3" inherits="LFGSearchStatusPlayerTemplate">
-						<Anchors>
-							<Anchor point="LEFT" relativeTo="$parentDamage2" relativePoint="RIGHT">
-								<Offset>
-									<AbsDimension x="5" y="0"/>
-								</Offset>
-							</Anchor>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("DAMAGER"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-				</Frames>
-			</Frame>
-			<Frame name="$parentGroupedRoleDisplay" hidden="true">
-				<Size x="1" y="1"/>
-				<Anchors>
-					<Anchor point="TOPLEFT" x="25" y="-40"/>
-				</Anchors>
-				<Frames>
-					<Frame name="$parentTank" inherits="LFGSearchStatusRoleWithCountTemplate">
-						<Anchors>
-							<Anchor point="TOPLEFT" x="35" y="0"/>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("TANK"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-					<Frame name="$parentHealer" inherits="LFGSearchStatusRoleWithCountTemplate">
-						<Anchors>
-							<Anchor point="LEFT" relativeTo="$parentTank" relativePoint="RIGHT">
-								<Offset>
-									<AbsDimension x="33" y="0"/>
-								</Offset>
-							</Anchor>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("HEALER"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-					<Frame name="$parentDamage" inherits="LFGSearchStatusRoleWithCountTemplate">
-						<Anchors>
-							<Anchor point="LEFT" relativeTo="$parentHealer" relativePoint="RIGHT">
-								<Offset>
-									<AbsDimension x="33" y="0"/>
-								</Offset>
-							</Anchor>
-						</Anchors>
-						<Scripts>
-							<OnLoad>
-								self.texture:SetTexCoord(GetTexCoordsForRole("DAMAGER"));
-							</OnLoad>
-						</Scripts>
-					</Frame>
-				</Frames>
-			</Frame>
-		</Frames>
-		<Scripts>
-			<OnLoad>
-				self:RegisterEvent("LFG_QUEUE_STATUS_UPDATE");
-				
-				self:SetBackdropBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b);
-				self:SetBackdropColor(TOOLTIP_DEFAULT_BACKGROUND_COLOR.r, TOOLTIP_DEFAULT_BACKGROUND_COLOR.g, TOOLTIP_DEFAULT_BACKGROUND_COLOR.b);
-				LFGSearchStatus_SetMode("individual");
-			</OnLoad>
-			<OnEvent function="LFGSearchStatus_OnEvent"/>
-			<OnShow function="LFGSearchStatus_Update"/>
-		</Scripts>
-	</Frame>
 	<Frame name="LFGDungeonReadyRewardTemplate" virtual="true">
 		<Size>
 			<AbsDimension x="40" y="40"/>
@@ -710,6 +457,25 @@
 							</Frame>
 						</Frames>
 					</Frame>
+					<Frame name="$parentRoleless">
+						<Size x="306" y="55"/>
+						<Anchors>
+							<Anchor point="CENTER" x="0" y="0"/>
+						</Anchors>
+						<Frames>
+							<Frame name="$parentReady" inherits="LFGDungeonReadyStatusRoleWithCountTemplate" parentKey="ready">
+								<Anchors>
+									<Anchor point="CENTER" x="0" y="0"/>
+								</Anchors>
+							</Frame>
+						</Frames>
+						<Scripts>
+							<OnLoad>
+								self.ready.texture:SetTexCoord(0.5234375, 0.78125, 0, 0.2578125);
+								self.ready.statusIcon:Hide();
+							</OnLoad>
+						</Scripts>
+					</Frame>					
 				</Frames>
 			</Frame>
 			<Frame name="LFGDungeonReadyDialog" setAllPoints="true" toplevel="true" enableMouse="true">
@@ -829,7 +595,7 @@
 						<PushedTexture file="Interface\Buttons\UI-Panel-HideButton-Down"/>
 						<HighlightTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Highlight" alphaMode="ADD"/>
 					</Button>
-					<Button name="$parentEnterDungeonButton" inherits="UIPanelButtonTemplate2" text="ENTER_DUNGEON">
+					<Button name="$parentEnterDungeonButton" inherits="UIPanelButtonTemplate" text="ENTER_DUNGEON" parentKey="enterButton">
 						<Size>
 							<AbsDimension x="115" y="22"/>
 						</Size>
@@ -847,7 +613,7 @@
 							</OnClick>
 						</Scripts>
 					</Button>
-					<Button name="$parentLeaveQueueButton" inherits="UIPanelButtonTemplate2" text="LEAVE_QUEUE">
+					<Button name="$parentLeaveQueueButton" inherits="UIPanelButtonTemplate" text="LEAVE_QUEUE">
 						<Size>
 							<AbsDimension x="115" y="22"/>
 						</Size>
@@ -947,7 +713,7 @@
 						</Anchors>
 						<Layers>
 							<Layer level="BACKGROUND">
-								<Texture file="Interface\LFGFrame\UI-LFG-SEPARATOR">
+								<Texture file="Interface\LFGFrame\UI-LFG-SEPARATOR" parentKey="underline">
 									<Size>
 										<AbsDimension x="170" y="40"/>
 									</Size>
@@ -963,6 +729,7 @@
 							</Layer>
 							<Layer level="ARTWORK">
 								<FontString name="$parentName" inherits="GameFontNormalLarge" justifyH="CENTER" parentKey="name">
+									<Size x="240" y="0"/>
 									<Anchors>
 										<Anchor point="TOP">
 											<Offset>
@@ -1362,7 +1129,7 @@
 					</OnLoad>
 				</Scripts>
 			</Button>
-			<Button name="$parentAcceptButton" inherits="UIPanelButtonTemplate2" text="ACCEPT" motionScriptsWhileDisabled="true">
+			<Button name="$parentAcceptButton" inherits="UIPanelButtonTemplate" text="ACCEPT" motionScriptsWhileDisabled="true">
 				<Size>
 					<AbsDimension x="115" y="22"/>
 				</Size>
@@ -1382,7 +1149,7 @@
 					</OnLeave>
 				</Scripts>
 			</Button>
-			<Button name="$parentDeclineButton" inherits="UIPanelButtonTemplate2" text="DECLINE">
+			<Button name="$parentDeclineButton" inherits="UIPanelButtonTemplate" text="DECLINE">
 				<Size>
 					<AbsDimension x="115" y="22"/>
 				</Size>

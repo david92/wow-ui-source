@@ -104,7 +104,7 @@ end
 
 function ArenaEnemyFrames_UpdateVisible()
 	local _, instanceType = IsInInstance();
-	if ( ArenaEnemyFrames.show and (instanceType == "arena")) then
+	if ( ArenaEnemyFrames.show and ((instanceType == "arena") or (GetNumArenaOpponents() > 0))) then
 		ArenaEnemyFrames:Show();
 	else
 		ArenaEnemyFrames:Hide();
@@ -151,6 +151,19 @@ function ArenaEnemyFrame_UpdatePlayer(self, useCVars)--At some points, we need t
 		self.classPortrait:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles");
 		self.classPortrait:SetTexCoord(unpack(CLASS_ICON_TCOORDS[class]));
 	end
+	
+	-- When not in an arena, show their faction icon (these are really flag carriers, not arena opponents)
+	local _, instanceType = IsInInstance();
+	local factionGroup, factionName = UnitFactionGroup(self.unit);
+	local pvpIcon = _G[self:GetName() .. "PVPIcon"];
+	if ( factionGroup and factionGroup ~= "Neutral" and instanceType ~= "arena" ) then
+		pvpIcon:SetTexture("Interface\\TargetingFrame\\UI-PVP-"..factionGroup);
+		pvpIcon:Show();
+		self:SetPoint("RIGHT", self:GetParent(), "RIGHT", -18, 0);
+	else
+		pvpIcon:Hide();
+		self:SetPoint("RIGHT", self:GetParent(), "RIGHT", -2, 0);
+	end
 
 	ArenaEnemyFrames_UpdateVisible();
 end
@@ -187,6 +200,7 @@ end
 
 function ArenaEnemyFrame_OnEvent(self, event, arg1, arg2)
 	if ( event == "ARENA_OPPONENT_UPDATE" and arg1 == self.unit ) then
+		ArenaPrepFrames:Hide();
 		if ( arg2 == "seen" or arg2 == "destroyed") then
 			ArenaEnemyFrame_Unlock(self);
 			ArenaEnemyFrame_UpdatePlayer(self);
@@ -199,6 +213,7 @@ function ArenaEnemyFrame_OnEvent(self, event, arg1, arg2)
 				self.manabar:SetScript("OnUpdate", UnitFrameManaBar_OnUpdate);
 				UnitFrameManaBar_UnregisterDefaultEvents(self.manabar);
 			end
+			ArenaEnemyFrame_UpdatePet(self);
 			UpdateArenaEnemyBackground();
 			UIParent_ManageFramePositions();
 		elseif ( arg2 == "unseen" ) then
@@ -332,4 +347,112 @@ function ArenaEnemyBackground_SetOpacity(opacity)
 		alpha = 1.0 - opacity;
 	end
 	ArenaEnemyBackground:SetAlpha(alpha);
+end
+
+-----------------------------------------------------------------------------
+--Arena preparation stuff, shows class and spec of opponents during countdown
+------------------------------------------------------------------------------
+
+
+function ArenaPrepFrames_OnLoad(self)
+	self:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS");
+	local numOpps = GetNumArenaOpponentSpecs();
+	if (numOpps and numOpps > 0) then
+		ArenaPrepFrames_OnEvent(self, "ARENA_PREP_OPPONENT_SPECIALIZATIONS");
+	end
+end
+
+function ArenaPrepFrames_OnEvent(self, event, ...) --also called in OnLoad
+	if (event == "ARENA_PREP_OPPONENT_SPECIALIZATIONS") then
+		UpdatePrepFrames();
+		self:Show()
+	end
+end
+
+function ArenaPrepFrames_OnShow(self)
+	ArenaPrepFrames_UpdateWatchFrame();
+	
+	DurabilityFrame_SetAlerts();
+	UIParent_ManageFramePositions()
+end
+
+function ArenaPrepFrames_OnHide(self)
+	--Make the stuff that needs to be shown shown again.
+	ArenaEnemyFrames_UpdateWatchFrame();
+	
+	DurabilityFrame_SetAlerts();
+	UIParent_ManageFramePositions();
+end
+
+function ArenaPrepFrames_UpdateWatchFrame()
+	local ArenaPrepFrames = ArenaPrepFrames;
+	if ( not WatchFrame:IsUserPlaced() ) then
+		if ( ArenaPrepFrames:IsShown() ) then
+			if ( WatchFrame_RemoveObjectiveHandler(WatchFrame_DisplayTrackedQuests) ) then
+				ArenaPrepFrames.hidWatchedQuests = true;
+			end
+		else
+			if ( ArenaPrepFrames.hidWatchedQuests ) then
+				WatchFrame_AddObjectiveHandler(WatchFrame_DisplayTrackedQuests);
+				ArenaPrepFrames.hidWatchedQuests = false;
+			end
+		end
+		WatchFrame_ClearDisplay();
+		WatchFrame_Update();
+	elseif ( ArenaPrepFrames.hidWatchedQuests ) then
+		WatchFrame_AddObjectiveHandler(WatchFrame_DisplayTrackedQuests);
+		ArenaPrepFrames.hidWatchedQuests = false;
+		WatchFrame_ClearDisplay();
+		WatchFrame_Update();
+	end
+end
+
+function UpdatePrepFrames()
+	local numOpps = GetNumArenaOpponentSpecs();
+	for i=1, MAX_ARENA_ENEMIES do
+		local prepFrame = _G["ArenaPrepFrame"..i];
+		if (i <= numOpps) then 
+			prepFrame.specPortrait = _G["ArenaPrepFrame"..i.."SpecPortrait"];
+			local specID = GetArenaOpponentSpec(i);
+			if (specID > 0) then 
+				local _, spec, _, specIcon, _, _, class = GetSpecializationInfoByID(specID);
+				if( class ) then
+					prepFrame.classPortrait:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles");
+					prepFrame.classPortrait:SetTexCoord(unpack(CLASS_ICON_TCOORDS[strupper(class)]));
+				end
+				SetPortraitToTexture(prepFrame.specPortrait, specIcon);
+			else
+				
+			end
+			prepFrame:Show();
+		else
+			prepFrame:Hide();
+		end
+	end
+	
+end
+
+function UpdateArenaPrepBackground(force)
+	if ( (SHOW_PARTY_BACKGROUND == "1") or force ) then
+		ArenaPrepBackground:Show();
+		local numOpps = GetNumArenaOpponents();
+		if ( numOpps > 0 ) then
+			ArenaPrepBackground:SetPoint("BOTTOMLEFT", "ArenaEnemyFrame"..numOpps.."PetFrame", "BOTTOMLEFT", -15, -10);
+		else
+			ArenaPrepBackground:Hide();
+		end
+	else
+		ArenaPrepBackground:Hide();
+	end
+	
+end
+
+function ArenaPrepBackground_SetOpacity(opacity)
+	local alpha;
+	if ( not opacity ) then
+		alpha = 1.0 - OpacityFrameSlider:GetValue();
+	else
+		alpha = 1.0 - opacity;
+	end
+	ArenaPrepBackground:SetAlpha(alpha);
 end
