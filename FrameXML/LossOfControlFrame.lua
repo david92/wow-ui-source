@@ -14,6 +14,7 @@ local timeLeftTimings = {
 
 local TEXT_OVERRIDE = {
 	[33786] = LOSS_OF_CONTROL_DISPLAY_CYCLONE,
+	[113506] = LOSS_OF_CONTROL_DISPLAY_CYCLONE,
 }
 
 local TIME_LEFT_FRAME_WIDTH = 200;
@@ -40,8 +41,8 @@ function LossOfControlFrame_OnEvent(self, event, ...)
 		local eventIndex = ...;
 		local locType, spellID, text, iconTexture, startTime, timeRemaining, duration, lockoutSchool, priority, displayType = C_LossOfControl.GetEventInfo(eventIndex);
 		if ( displayType == DISPLAY_TYPE_ALERT ) then
-			-- only display an alert type if there's nothing up or it has higher priority or longer time remaining if same priority
-			if ( not self:IsShown() or priority > self.priority or ( priority == self.priority and timeRemaining > self.TimeLeft.timeRemaining ) ) then
+			-- only display an alert type if there's nothing up or it has higher priority. If same priority, it needs to have longer time remaining
+			if ( not self:IsShown() or priority > self.priority or ( priority == self.priority and timeRemaining and ( not self.TimeLeft.timeRemaining or timeRemaining > self.TimeLeft.timeRemaining ) ) ) then
 				LossOfControlFrame_SetUpDisplay(self, true, locType, spellID, text, iconTexture, startTime, timeRemaining, duration, lockoutSchool, priority, displayType);
 			end
 			return;
@@ -105,8 +106,8 @@ function LossOfControlFrame_SetUpDisplay(self, animate, locType, spellID, text, 
 		text = TEXT_OVERRIDE[spellID] or text;
 		if ( locType == "SCHOOL_INTERRUPT" ) then
 			-- Replace text with school-specific lockout text
-			if(lockoutSchool and lockoutSchool ~= 0 and SchoolStringTable[lockoutSchool]) then
-				text = string.format(LOSS_OF_CONTROL_DISPLAY_INTERRUPT_SCHOOL, SchoolStringTable[lockoutSchool]);
+			if(lockoutSchool and lockoutSchool ~= 0) then
+				text = string.format(LOSS_OF_CONTROL_DISPLAY_INTERRUPT_SCHOOL, GetSchoolString(lockoutSchool));
 			end
 		end
 		self.AbilityName:SetText(text);
